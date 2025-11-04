@@ -1,0 +1,8 @@
+# Nmap 7.94SVN scan initiated Tue Nov  4 05:29:39 2025 as: nmap -sS -p 3000 -n -Pn -oN nmap-3000-2025-11-04-0529.txt 192.168.0.145
+Nmap scan report for 192.168.0.145
+Host is up.
+
+PORT     STATE    SERVICE
+3000/tcp filtered ppp
+
+# Nmap done at Tue Nov  4 05:29:41 2025 -- 1 IP address (1 host up) scanned in 2.08 seconds

@@ -1,0 +1,17 @@
+# Backups and artifacts
+backups/
+
+# Suricata default configs (some files may be unreadable inside container volume)
+suricata/*
+!suricata/suricata.yaml
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Keep Kibana exports versioned (do not ignore kibana_exports)
+# kibana_exports/*.ndjson

@@ -1,0 +1,44 @@
+# Minimal Suricata config for lab use
+# Focus: enable EVE JSON (alerts + flow) to /var/log/suricata/eve.json
+# Capture via libpcap on all interfaces ("any")
+
+%YAML 1.1
+---
+
+vars:
+  address-groups:
+    HOME_NET: "any"
+    EXTERNAL_NET: "any"
+
+default-log-dir: /var/log/suricata
+
+logging:
+  default-log-level: info
+
+pcap:
+  - interface: any
+    checksum-checks: auto
+
+detect-engine:
+  - profile: medium
+
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      community-id: true
+      community-id-seed: 0
+      types:
+        - alert:
+            metadata: yes
+        - flow:
+            enabled: yes
+            metadata: yes
+        - stats:
+            totals: yes
+            threads: yes
+            deltas: yes
+
+default-rule-path: /etc/suricata/rules
+rule-files: []
