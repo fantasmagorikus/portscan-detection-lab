@@ -5,6 +5,10 @@ backups/
 suricata/*
 !suricata/suricata.yaml
 
+# Large artifacts and local bundles
+*.tgz
+export.ndjson
+
 # OS junk
 .DS_Store
 Thumbs.db
