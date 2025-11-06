@@ -145,8 +145,17 @@ Outputs under `backups/<timestamp>/` include snapshot response, Suricata logs (i
 - `scripts/` — backup, health check, export/rename helpers
 - `kibana_exports/` — saved objects export (.ndjson)
 
+## Screenshots
+
+Dashboard overview (last 15 minutes):
+
+![Dashboard Overview](docs/screenshots/dashboard_overview.png)
+
+Recent activity (last 5 minutes):
+
+![Dashboard Last 5m](docs/screenshots/dashboard_overview_last5.png)
+
 ## Acknowledgements
 
 - Suricata IDS, Elastic Beats, Elasticsearch, Kibana
 - OWASP Juice Shop
-
