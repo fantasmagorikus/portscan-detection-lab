@@ -74,6 +74,18 @@ bash scripts/retomada_check.sh
 ```
 Artifacts are saved as `retomada_check-YYYY-MM-DD-HHMMSS.txt` and symlinked to `retomada_check-latest.txt`.
 
+## Demo TL;DR (single host)
+
+```
+git clone <this repo>
+cd suricata-port-scan-detection-lab/homelab-security/suricata-elk-lab
+echo 'SURICATA_IFACE=lo' > .env
+docker compose up -d
+bash scripts/retomada_check.sh
+sudo nmap -sS -p 1-10000 127.0.0.1 -T4 --reason
+open http://localhost:5601 (Dashboard: "Port Scan Detection (Suricata)")
+```
+
 ## Traffic Generation (Nmap)
 
 - Single-host demo (loopback):
@@ -166,6 +178,20 @@ Recent activity (last 5 minutes):
 ## Changelog
 
 See CHANGELOG.md for versioned history and highlights.
+
+## Results and Evidence
+
+- Ingested flow events (last 10 min): 109
+- Alerts (last 10 min): total 473
+  - sid=9901001 (Port Scan threshold): 224
+  - sid=9900001 (TCP SYN): 249
+- Dashboard and Saved Objects export available in `kibana_exports/`
+
+## License, Conduct, Security
+
+- MIT License (LICENSE)
+- Code of Conduct (CODE_OF_CONDUCT.md)
+- Security policy and vulnerability reporting (SECURITY.md)
 
 ## Acknowledgements
 
