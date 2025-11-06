@@ -187,9 +187,17 @@ Recent activity (last 5 minutes):
 
 ![Dashboard Last 5m](docs/screenshots/dashboard_overview_last5.png)
 
+Alerts over time (stacked by signature):
+
+![Alerts Over Time](docs/screenshots/alerts_over_time.png)
+
 Top sources (alerts):
 
 ![Top Sources](docs/screenshots/top_sources.png)
+
+Top destination ports (alerts):
+
+![Top Ports](docs/screenshots/top_ports.png)
 
 Alert details (Discover):
 
