@@ -2,7 +2,31 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/fantasmagorikus/suricata-port-scan-detection-lab)](https://github.com/fantasmagorikus/suricata-port-scan-detection-lab/releases)
-[![Docs](https://img.shields.io/badge/docs-README-blue)](README.pt-BR.md)
+[![Docs (EN)](https://img.shields.io/badge/docs-EN-blue)](README.md)
+[![Docs (pt‑BR)](https://img.shields.io/badge/docs-pt%E2%80%91BR-blue)](README.pt-BR.md)
+
+Lab reprodutível para detectar varreduras TCP SYN com Suricata, enviar eventos via Filebeat para Elasticsearch e visualizar no Kibana Lens. Inclui regras locais, export de objetos do Kibana (NDJSON), scripts de health/backup/export/screenshots e documentação bilíngue.
+
+![Visão Geral do Dashboard](docs/screenshots/dashboard_overview.png)
+
+## Conteúdo
+
+- O que eu construí
+- Arquitetura e Justificativa
+- Decisões de Design
+- Componentes e Versões
+- Regras de Detecção
+- Setup e Verificações
+- Demo TL;DR (Uma máquina)
+- Geração de Tráfego (Nmap)
+- Dashboard Kibana e KQL
+- Exports (NDJSON) e Reprodutibilidade
+- Backup e Snapshots
+- Troubleshooting
+- Estrutura do Projeto
+- Capturas (Screenshots)
+- Resultados e Evidências
+- Licença, Conduta, Segurança
 
 O que eu construí
 - Um lab containerizado para detectar varreduras TCP SYN e visualizar no Kibana.
@@ -60,34 +84,34 @@ alert tcp any any -> $HOME_NET any (msg:"LAB - Port Scan (SYN threshold)"; flags
 
 ## Setup e Verificações
 
-Pré‑requisitos: Linux com Docker + Docker Compose, `curl`, `jq` e `nmap` para gerar tráfego.
+Pré‑requisitos (Linux): Docker + Docker Compose, `curl`, `jq` e `nmap` para gerar tráfego.
 
 1) Entre no diretório do lab
-```
+```bash
 cd homelab-security/suricata-elk-lab
 ```
 
 2) Preparar o ambiente
 - Copie o `.env.example` e ajuste a interface se necessário:
-```
+```bash
 cp .env.example .env
 # padrão: SURICATA_IFACE=lo (uma máquina). Para LAN, ajuste para sua NIC (ex.: wlp3s0)
 ```
 
 3) Suba a stack
-```
+```bash
 docker compose up -d
 ```
 
 4) Rodar o health check (imprime e salva o resultado)
-```
+```bash
 bash scripts/retomada_check.sh
 ```
 Os artefatos ficam como `retomada_check-YYYY-MM-DD-HHMMSS.txt` e symlink `retomada_check-latest.txt`.
 
-## Demo TL;DR (uma máquina)
+## Demo TL;DR (Uma máquina)
 
-```
+```bash
 git clone <este repositório>
 cd suricata-port-scan-detection-lab/homelab-security/suricata-elk-lab
 cp .env.example .env
@@ -100,12 +124,12 @@ abra http://localhost:5601 (Dashboard: "Port Scan Detection (Suricata)")
 ## Geração de Tráfego (Nmap)
 
 - Uma máquina só (loopback):
-```
+```bash
 sudo nmap -sS -p 1-10000 127.0.0.1 -T4 --reason
 ```
 
 - Em rede (a partir de outro host na LAN, escaneando esta máquina):
-```
+```bash
 sudo nmap -sS -p 1-1000 <IP_DA_VITIMA> -T4 --reason
 ```
 
@@ -136,7 +160,7 @@ suricata.eve.alert.signature_id: 9901001
 Export de “Saved Objects” está em `kibana_exports/` (NDJSON). Importe para recriar o dashboard e objetos relacionados.
 
 - Export (script):
-```
+```bash
 bash scripts/kibana_export_dashboard.sh "Port Scan Detection (Suricata)"
 ```
 
@@ -145,7 +169,7 @@ bash scripts/kibana_export_dashboard.sh "Port Scan Detection (Suricata)"
 ## Backup e Snapshots
 
 Crie snapshot do Elasticsearch e arquive configs do lab de uma vez:
-```
+```bash
 bash scripts/backup.sh
 ```
 Saída em `backups/<timestamp>/`: resposta do snapshot, logs do Suricata (se houver) e tarball das configs.

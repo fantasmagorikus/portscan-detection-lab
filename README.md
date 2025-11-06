@@ -2,7 +2,32 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/fantasmagorikus/suricata-port-scan-detection-lab)](https://github.com/fantasmagorikus/suricata-port-scan-detection-lab/releases)
-[![Docs](https://img.shields.io/badge/docs-README-blue)](README.md)
+[![Docs (EN)](https://img.shields.io/badge/docs-EN-blue)](README.md)
+[![Docs (pt‑BR)](https://img.shields.io/badge/docs-pt%E2%80%91BR-blue)](README.pt-BR.md)
+
+Modern, reproducible lab to detect TCP SYN port scanning with Suricata, ship events via Filebeat to Elasticsearch, and visualize in Kibana Lens. Includes local detection rules, Saved Objects export (NDJSON), health/backup/export/screenshot scripts, and bilingual docs.
+
+![Dashboard Overview](docs/screenshots/dashboard_overview.png)
+
+## Contents
+
+- What I Built
+- Architecture and Rationale
+- Design Decisions
+- Components and Versions
+- Detection Rules
+- Setup and Health Checks
+- Demo TL;DR (Single Host)
+- Traffic Generation (Nmap)
+- Kibana Dashboard and KQL
+- Exports (NDJSON) and Reproducibility
+- Backup and Snapshots
+- Troubleshooting
+- Project Layout
+- Screenshots
+- Results and Evidence
+- License, Conduct, Security
+- Acknowledgements
 
 What I built
 - A containerized detection lab that identifies TCP SYN port scanning and visualizes results in Kibana.
@@ -12,7 +37,7 @@ What I built
 - Operational scripts for health checks, reproducible exports (NDJSON), snapshots/backups, and headless screenshot capture.
 - Single-host and network modes via `.env` (`SURICATA_IFACE=lo` or your NIC).
 
-Detect TCP SYN port scans and visualize them with Kibana Lens. This lab uses Suricata to generate EVE JSON, Filebeat (suricata module) to ship data into Elasticsearch, and a Kibana dashboard to analyze and present results. An OWASP Juice Shop service is included as a convenient target on port 3000.
+Detect TCP SYN port scans and visualize them with Kibana Lens. Suricata generates EVE JSON, Filebeat (suricata module) ships structured ECS events into Elasticsearch, and a Kibana dashboard presents results. OWASP Juice Shop runs as a target on port 3000.
 
 ## Architecture and Rationale
 
@@ -60,34 +85,34 @@ alert tcp any any -> $HOME_NET any (msg:"LAB - Port Scan (SYN threshold)"; flags
 
 ## Setup and Health Checks
 
-Prerequisites: Linux with Docker + Docker Compose, `curl`, `jq`, and `nmap` for traffic generation.
+Prerequisites (Linux): Docker + Docker Compose, `curl`, `jq`, and `nmap` for traffic generation.
 
 1) Change into the lab directory
-```
+```bash
 cd homelab-security/suricata-elk-lab
 ```
 
 2) Prepare environment
 - Copy the example env and adjust interface if needed:
-```
+```bash
 cp .env.example .env
 # default is SURICATA_IFACE=lo (single-host). For LAN, set SURICATA_IFACE to your NIC (e.g. wlp3s0)
 ```
 
 3) Start the stack
-```
+```bash
 docker compose up -d
 ```
 
 4) Run the one-shot health check (prints and logs results)
-```
+```bash
 bash scripts/retomada_check.sh
 ```
 Artifacts are saved as `retomada_check-YYYY-MM-DD-HHMMSS.txt` and symlinked to `retomada_check-latest.txt`.
 
-## Demo TL;DR (single host)
+## Demo TL;DR (Single Host)
 
-```
+```bash
 git clone <this repo>
 cd suricata-port-scan-detection-lab/homelab-security/suricata-elk-lab
 cp .env.example .env
@@ -100,12 +125,12 @@ open http://localhost:5601 (Dashboard: "Port Scan Detection (Suricata)")
 ## Traffic Generation (Nmap)
 
 - Single-host demo (loopback):
-```
+```bash
 sudo nmap -sS -p 1-10000 127.0.0.1 -T4 --reason
 ```
 
 - Network demo (from another host on the LAN, scanning this machine):
-```
+```bash
 sudo nmap -sS -p 1-1000 <VICTIM_IP> -T4 --reason
 ```
 
@@ -136,7 +161,7 @@ suricata.eve.alert.signature_id: 9901001
 Saved Objects export is provided under `kibana_exports/` as NDJSON (newline-delimited JSON). Import it to recreate dashboard and related objects.
 
 - Export (script):
-```
+```bash
 bash scripts/kibana_export_dashboard.sh "Port Scan Detection (Suricata)"
 ```
 
@@ -145,7 +170,7 @@ bash scripts/kibana_export_dashboard.sh "Port Scan Detection (Suricata)"
 ## Backup and Snapshots
 
 Create an Elasticsearch snapshot and archive lab configs with a single script:
-```
+```bash
 bash scripts/backup.sh
 ```
 Outputs under `backups/<timestamp>/` include snapshot response, Suricata logs (if available), and a tarball of key configs.
