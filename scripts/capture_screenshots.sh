@@ -98,4 +98,8 @@ capture "$URL4" "$OUT4" "Discover alert details"
 OUT5="$OUT_DIR/alerts_over_time.png"
 capture_viewport "$URL2" "$OUT5" "Alerts over time close-up" 1024 640
 
+# 6) Top destination ports close-up (viewport tuned; from dashboard)
+OUT6="$OUT_DIR/top_ports_closeup.png"
+capture_viewport "$URL1" "$OUT6" "Top ports close-up" 1280 720
+
 echo "Done. Screenshots saved under $OUT_DIR"
