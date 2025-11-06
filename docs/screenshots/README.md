@@ -1,18 +1,17 @@
 Screenshots
 ===========
 
-Drop PNG/JPEG screenshots here and reference them from the README files.
+This folder contains real screenshots captured from Kibana using `scripts/capture_screenshots.sh`.
 
-Suggested captures
-- Dashboard overview (Port Scan Detection — Suricata)
-- Alerts over time (zoomed into a recent Nmap run)
-- Top source IPs and Top destination ports panels
-- Discover view with alert fields visible (timestamp, source/destination, signature)
+Included images
+- `dashboard_overview.png` — Dashboard “Port Scan Detection (Suricata)”, time range: last 1 hour
+- `dashboard_overview_last5.png` — Same dashboard, time range: last 10 minutes
+- `top_sources.png` — Lens: “Suricata – Top source IPs (alerts)” (embed view)
+- `discover_alerts.png` — Discover saved search: “Suricata – Alert details (Discover)”
 
-File naming
-- dashboard_overview.png
-- alerts_over_time.png
-- top_sources.png
-- top_ports.png
-- discover_alerts.png
+How to regenerate
+- Ensure recent alerts exist (run an Nmap SYN scan or generate outbound connections):
+  - `make nmap-local` (single-host) or generate multiple HTTP(S) requests
+- Run: `make screenshots`
+- The script retries until alerts are present and then captures all views in kiosk/embed mode.
 

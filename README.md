@@ -187,6 +187,14 @@ Recent activity (last 5 minutes):
 
 ![Dashboard Last 5m](docs/screenshots/dashboard_overview_last5.png)
 
+Top sources (alerts):
+
+![Top Sources](docs/screenshots/top_sources.png)
+
+Alert details (Discover):
+
+![Discover Alerts](docs/screenshots/discover_alerts.png)
+
 ## Changelog
 
 See CHANGELOG.md for versioned history and highlights.
