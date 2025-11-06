@@ -24,6 +24,16 @@ flowchart LR
 - Elasticsearch/Kibana: fast search, KQL, and Lens-based visualizations
 - Local rules: tailored detections for SYN and scan thresholds to highlight Nmap activity
 
+## Design Decisions
+
+- Suricata + EVE JSON: mature IDS with structured output (alerts, flows, stats) that fits ELK ingestion well.
+- Filebeat Suricata module: automatic ECS mapping and data streams reduce custom parsing/schema work.
+- Host networking for Suricata: required to see host traffic on Linux; toggled via `.env` for single‑host (lo) or LAN (NIC).
+- Local rules: baseline SYN + threshold rule produce clear scan signals without heavy rulepacks; easy to explain and reproduce.
+- Kibana Lens + Saved Objects: fast iteration and portable visuals; NDJSON export attached to the release.
+- Snapshots + backup scripts: preserve state and artifacts for repeatable demonstrations and audits.
+- Headless screenshots: consistent portfolio evidence without manual capture steps.
+
 ## Components and Versions
 
 - Suricata 8.x (container `jasonish/suricata:latest`)
