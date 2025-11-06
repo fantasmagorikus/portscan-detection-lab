@@ -199,6 +199,10 @@ Top destination ports (alerts):
 
 ![Top Ports](docs/screenshots/top_ports.png)
 
+Top destination ports (close-up):
+
+![Top Ports Close-up](docs/screenshots/top_ports_closeup.png)
+
 Alert details (Discover):
 
 ![Discover Alerts](docs/screenshots/discover_alerts.png)

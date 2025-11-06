@@ -67,3 +67,15 @@ Lab archive: $OUT_DIR/lab-config-$TS.tgz
 EOF
 
 echo "Backup completed at: $OUT_DIR"
+
+# Write next-steps helper for next session
+cat > "$OUT_DIR/NEXT_STEPS.txt" <<'NEXT'
+Next session checklist
+- Verify stack health: make health
+- Ensure SURICATA_IFACE is correct in .env (lo or your NIC)
+- Generate activity: make nmap-local (single host) or produce outbound HTTP(S)
+- Regenerate screenshots: make screenshots (script validates alerts before capture)
+- Confirm panel close-ups exist: alerts_over_time.png and top_ports_closeup.png
+- If not already done in GitHub: set social preview (upload docs/screenshots/dashboard_overview.png) and pin repo on profile
+- Handoff doc for main agent: Documents/codex_agents/SOC_PROJECTS/PORT_SCAN_LAB.md
+NEXT
