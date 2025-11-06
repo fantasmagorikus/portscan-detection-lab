@@ -1,105 +1,152 @@
-# Suricata → Filebeat → Elasticsearch → Kibana (com Juice Shop)
+# Port Scan Detection Lab — Suricata → Filebeat → Elasticsearch → Kibana
 
-Lab para detectar e visualizar varredura de portas (SYN scan via Nmap) usando Suricata (EVE JSON) → Filebeat (módulo Suricata) → Elasticsearch → Kibana. O OWASP Juice Shop roda como alvo na porta 3000.
+Detect TCP SYN port scans and visualize them with Kibana Lens. This lab uses Suricata to generate EVE JSON, Filebeat (suricata module) to ship data into Elasticsearch, and a Kibana dashboard to analyze and present results. An OWASP Juice Shop service is included as a convenient target on port 3000.
 
-**Pré‑requisitos**
-- Linux com Docker e Docker Compose
-- Dois consoles: identifique (vítima) e (atacante)
+## Architecture and Rationale
 
-**Subir e validar a stack (vítima)**
-- `cd homelab-security/suricata-elk-lab`
-- `docker compose up -d`
-- Verificações rápidas (terminam após imprimir):
-  - Elasticsearch: `curl -s http://localhost:9200 | jq .version.number`
-  - Kibana: `curl -s http://localhost:5601/api/status | jq .version.number`
-  - Filebeat (config): `docker exec -it suricata-lab-filebeat filebeat -e -strict.perms=false test config`
-  - Filebeat (output): `docker exec -it suricata-lab-filebeat filebeat -e -strict.perms=false test output`
-  - Suricata EVE JSON: `docker exec suricata-lab-suricata sh -lc "ls -lh /var/log/suricata/eve.json; head -n 5 /var/log/suricata/eve.json"`
+```mermaid
+flowchart LR
+  A[Suricata (EVE.json)] -->|Filebeat Suricata module| B[Elasticsearch]
+  B --> C[Kibana]
+  A <--> D[Local Rules\n9900001 / 9901001]
+```
 
-**Gerar tráfego (atacante)**
-- Descobrir IP da vítima (no host vítima): `hostname -I`
-- Executar SYN scan: `sudo nmap -sS -p 1-1000 <IP_VITIMA>`
+- Suricata: mature IDS that emits structured EVE JSON (alerts, flows, stats)
+- Filebeat Suricata module: ECS mapping + data streams simplify ingestion
+- Elasticsearch/Kibana: fast search, KQL, and Lens-based visualizations
+- Local rules: tailored detections for SYN and scan thresholds to highlight Nmap activity
 
-**Kibana – Data View e Lens**
-- Data View (vítima): Kibana → Stack Management → Kibana → Data Views → New data view
-  - Name: `filebeat-*` | Time field: `@timestamp`
-- Filtro KQL base para alerts: `event.module: "suricata" and suricata.eve.event_type: "alert"`
-- Timepicker: “Last 5 minutes” ou “Last 15 minutes”
+## Components and Versions
 
-Lens 1) Alerts over time (stacked by signature)
-- Visualization type: Area (stacked)
-- Vertical axis (Metric): Functions → Count
-- Horizontal axis: Field = `@timestamp` → Functions = Date histogram
-- Break down by: Field = `suricata.eve.alert.signature` → Functions = Top values → Number of values = 3–5 → Order by = Count of records → Direction = Descending
-- Opções do gráfico: habilite “Stacked” (não percentual)
-- KQL: `event.module: "suricata" and suricata.eve.event_type: "alert"`
+- Suricata 8.x (container `jasonish/suricata:latest`)
+- Filebeat 8.14.3 (container)
+- Elasticsearch 8.14.3 (single node, security off for lab)
+- Kibana 8.14.3
+- OWASP Juice Shop (target app) on `:3000`
 
-Lens 2) Top source IPs (Bar vertical)
-- Visualization type: Bar vertical
-- Vertical axis: Functions → Count
-- Horizontal axis: Field = `source.ip` (ou `suricata.eve.src_ip`) → Functions = Top values
-- Ajustes: Number of values = 10 | Order by = Count of records | Direction = Descending
+## Detection Rules (local)
 
-Lens 3) Top destination ports (Bar vertical)
-- Vertical axis: Functions → Count
-- Horizontal axis: Field = `destination.port` (ou `suricata.eve.dest_port`) → Functions = Top values
-- Ajustes: Number of values = 10 | Order by = Count of records | Direction = Descending
+Defined in `local-rules/local.rules`:
 
-Lens 4) Destination port ranges (Bar vertical ou Pie)
-- Vertical axis/Metric: Functions → Count
-- Horizontal axis/Slice by: Field = `destination.port` (ou `suricata.eve.dest_port`) → Functions = Ranges
-- Ranges: 0–1023 | 1024–49151 | 49152–65535
+```
+alert tcp any any -> $HOME_NET any (msg:"LAB - TCP SYN"; flags:S; flow:stateless; sid:9900001; rev:2;)
+alert tcp any any -> $HOME_NET any (msg:"LAB - Port Scan (SYN threshold)"; flags:S; flow:stateless; detection_filter: track by_src, count 20, seconds 60; classtype:attempted-recon; sid:9901001; rev:1;)
+```
 
-Lens 5) Pie – Top N destination.port
-- Metric: Functions → Count
-- Slice by: Field = `destination.port` (ou `suricata.eve.dest_port`) → Functions = Top values | Number of values = 3–5
-- Habilite porcentagens nas opções do gráfico
+- 9900001: baseline SYN detection
+- 9901001: raises an alert when a source sends ≥20 SYNs within 60s (by_src)
 
-Item 6) Tabela de detalhes (recomendado: Discover → Saved search)
-- Discover: Kibana → Analytics → Discover
-- Data view: `filebeat-*` | KQL: `event.module: "suricata" and suricata.eve.event_type: "alert"`
-- Adicione colunas: `@timestamp`, `source.ip`, `source.port`, `destination.ip`, `destination.port`, `network.transport`, `suricata.eve.alert.signature`, `suricata.eve.alert.signature_id`, `suricata.eve.in_iface`
-- Ordene por `@timestamp` desc | Save: “Suricata – Alert details (Discover)”
-- Em Dashboard: “Edit” → “Add panel” → “Saved search” → selecione a busca salva
+## Setup and Health Checks
 
-**Exportar/Importar objetos do Kibana (UI)**
-- Export (UI): Kibana → Stack Management → Saved Objects → Export
-  - Pesquise e marque “SIEM LAB NOVO” (Dashboard) e selecione “Include related objects” → Export ndjson
-  - Salve em `kibana_exports/export-YYYY-MM-DD-SIEM-LAB-NOVO.ndjson`
-- Import (UI): Kibana → Stack Management → Saved Objects → Import → escolha o `.ndjson` → confirme as opções
+Prerequisites: Linux with Docker + Docker Compose, `curl`, `jq`, and `nmap` for traffic generation.
 
-**Export por API (alternativa automatizada)**
-- Encontrar ID: `curl -s -H 'kbn-xsrf: true' 'http://localhost:5601/api/saved_objects/_find?type=dashboard&search_fields=title&search=SIEM%20LAB%20NOVO' | jq -r '.saved_objects[] | select(.attributes.title=="SIEM LAB NOVO") | .id'`
-- Exportar: `curl -s -H 'kbn-xsrf: true' -H 'Content-Type: application/json' -X POST 'http://localhost:5601/api/saved_objects/_export' -d '{"objects":[{"type":"dashboard","id":"<ID>"}],"includeReferencesDeep":true}' > kibana_exports/export-$(date +%F)-SIEM-LAB-NOVO.ndjson`
+1) Change into the lab directory
+```
+cd homelab-security/suricata-elk-lab
+```
 
-**Backup (script do lab, vítima)**
-- `chmod +x scripts/backup.sh && ./scripts/backup.sh`
-- Gera `backups/<timestamp>/` com: `compose-ps.txt`, `suricata-logs/` (se existir), `es-snapshot-<SNAP>.json` e `lab-config-<timestamp>.tgz`
+2) Choose your capture interface
+- Single-host demo (loopback):
+```
+echo 'SURICATA_IFACE=lo' > .env
+```
+- Network demo (Wi‑Fi/Ethernet): set to your host interface (e.g. `wlp3s0`)
+```
+echo 'SURICATA_IFACE=wlp3s0' > .env
+```
 
-Snapshot do Elasticsearch (manual)
-- Registrar repo (uma vez):
-  - `curl -X PUT http://localhost:9200/_snapshot/lab_repo -H 'Content-Type: application/json' -d '{"type":"fs","settings":{"location":"/usr/share/elasticsearch/snapshots"}}'`
-- Criar snapshot agora:
-  - `SNAP=snap-$(date +%F-%H%M)`
-  - `curl -X PUT "http://localhost:9200/_snapshot/lab_repo/$SNAP?wait_for_completion=true"`
-- Restaurar (exemplo):
-  - `curl -X POST "http://localhost:9200/_snapshot/lab_repo/$SNAP/_restore" -H 'Content-Type: application/json' -d '{"indices":"filebeat-*","include_global_state":true}'`
+3) Start the stack
+```
+docker compose up -d
+```
 
-**Dicas de leitura e triagem (tabela de detalhes)**
-- Clique em valores (ex.: `source.ip`) e use “Filter for value” para refinar
-- Campos úteis: `@timestamp`, `source.ip`, `source.port`, `destination.ip`, `destination.port`, `network.transport`, `suricata.eve.alert.signature`, `suricata.eve.alert.signature_id`, `suricata.eve.in_iface`
-- Para focar na regra do lab: `suricata.eve.alert.signature_id: 9900001`
+4) Run the one-shot health check (prints and logs results)
+```
+bash scripts/retomada_check.sh
+```
+Artifacts are saved as `retomada_check-YYYY-MM-DD-HHMMSS.txt` and symlinked to `retomada_check-latest.txt`.
 
-**Portfólio (GitHub)**
-- `.gitignore` simples (evite versionar `backups/`):
-  - ver arquivo `.gitignore` neste projeto
-- Comandos (vítima):
-  - `git init`
-  - `git add . && git commit -m "SOC/SIEM lab: Suricata → Filebeat → ES → Kibana"`
-  - `git branch -M main && git remote add origin <URL_DO_SEU_REPO>`
-  - `git push -u origin main`
-- Inclua no README: arquitetura, passos, KQL, capturas de tela da dashboard, e o arquivo `kibana_exports/*.ndjson`
+## Traffic Generation (Nmap)
 
-**Notas**
-- Suricata usa `network_mode: host` (Linux). Em macOS/Windows, adapte a captura
-- ES sem segurança para simplificar; em produção, habilite `xpack.security` e TLS
+- Single-host demo (loopback):
+```
+sudo nmap -sS -p 1-10000 127.0.0.1 -T4 --reason
+```
+
+- Network demo (from another host on the LAN, scanning this machine):
+```
+sudo nmap -sS -p 1-1000 <VICTIM_IP> -T4 --reason
+```
+
+## Kibana Dashboard and KQL
+
+Open Kibana at `http://localhost:5601`.
+
+- Create Data View (if prompted):
+  - Name: `filebeat-*`
+  - Time field: `@timestamp`
+
+- Dashboard: “Port Scan Detection (Suricata)”
+  - Alerts over time (stacked by signature)
+  - Top source IPs (alerts)
+  - Top destination ports (alerts)
+  - Destination port ranges (well-known/registered/dynamic)
+  - Alert details (saved search)
+
+- Useful KQL filters:
+```
+event.module: "suricata" and suricata.eve.event_type: "flow"
+event.module: "suricata" and suricata.eve.event_type: "alert"
+suricata.eve.alert.signature_id: 9901001
+```
+
+## Exports (NDJSON) and Reproducibility
+
+Saved Objects export is provided under `kibana_exports/` as NDJSON (newline-delimited JSON). Import it to recreate dashboard and related objects.
+
+- Export (script):
+```
+bash scripts/kibana_export_dashboard.sh "Port Scan Detection (Suricata)"
+```
+
+- Import (UI): Kibana → Stack Management → Saved Objects → Import → select `.ndjson` and confirm.
+
+## Backup and Snapshots
+
+Create an Elasticsearch snapshot and archive lab configs with a single script:
+```
+bash scripts/backup.sh
+```
+Outputs under `backups/<timestamp>/` include snapshot response, Suricata logs (if available), and a tarball of key configs.
+
+## Troubleshooting
+
+- No alerts after Nmap
+  - Ensure the capture interface matches your scenario (`lo` for single-host, your NIC for LAN)
+  - Confirm rules are loaded and Suricata is healthy (`docker logs suricata-lab-suricata`)
+  - Increase scan intensity (e.g. `-p 1-10000`)
+
+- No data in Kibana
+  - Verify Filebeat config/output:
+    - `docker exec suricata-lab-filebeat filebeat -e -strict.perms=false test config`
+    - `docker exec suricata-lab-filebeat filebeat -e -strict.perms=false test output`
+  - Check Elasticsearch/Kibana reachability (`curl` 9200/5601)
+
+- Time alignment issues
+  - In Kibana, set timezone to “Browser” and enlarge the time window
+
+## Project Layout
+
+- `docker-compose.yml` — containers and volumes
+- `.env` — capture interface (`SURICATA_IFACE`)
+- `suricata/suricata.yaml` — EVE JSON outputs (alerts, flows)
+- `local-rules/local.rules` — lab detection rules (9900001 / 9901001)
+- `filebeat/filebeat.yml` — module suricata → Elasticsearch
+- `scripts/` — backup, health check, export/rename helpers
+- `kibana_exports/` — saved objects export (.ndjson)
+
+## Acknowledgements
+
+- Suricata IDS, Elastic Beats, Elasticsearch, Kibana
+- OWASP Juice Shop
+

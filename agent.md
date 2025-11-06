@@ -119,9 +119,25 @@ Checkpoint de sessão (progresso salvo)
 - Dashboard concluída: SIEM LAB NOVO (Lens 1–5) + tabela de detalhes via Discover (Saved search).
 - Dica: filtro KQL base das Lens: `event.module: "suricata" and suricata.eve.event_type: "alert"`.
 
+- Sessão 2025-11-06:
+  - Interface atual do Suricata: `lo` (loopback) para testes locais (AF_PACKET ok).
+  - Regras locais: adicionada `LAB - Port Scan (SYN threshold)` (sid: 9901001) com detection_filter (20 SYN/60s por origem).
+  - Elasticsearch (últimos 10 min): flows=109 totais; para `source.ip=192.168.0.145` flows=67; `uniq(destination.port)=10`.
+  - Dashboard renomeada: "Port Scan Detection (Suricata)".
+  - Exports Kibana: `kibana_exports/export-2025-11-06-port-scan-detection-suricata.ndjson` (atual) e `kibana_exports/export-2025-11-06-siem-lab-novo.ndjson` (antigo).
+  - Backup/snapshot: `backups/2025-11-06-035413/` (ver `manifest.txt`).
+  - Alertas últimos 10 min: total=473; sid 9901001 (threshold)=224; sid 9900001 (SYN)=249.
+  - Próximos: para um pico visual ainda maior nas Lens, use `sudo nmap -sS -p 1-10000 127.0.0.1 -T4 --reason`.
+
+O que é o export NDJSON do Kibana
+- É um arquivo de “Saved Objects” (Dashboard, Lens, Searches, Data View) em formato Newline-Delimited JSON.
+- Permite versionar/portar a visualização do lab: você importa no Kibana e tem a mesma dashboard/painéis.
+- Como importar: Kibana → Stack Management → Saved Objects → Import → selecione o `.ndjson` → confirme.
+
 Backups (auto) – status
 - Script `scripts/backup.sh` testado (CLI): concluiu com sucesso.
-- Último backup gerado: backups/2025-11-04-155930 (ver manifest e tar.gz)
+- Último backup gerado: backups/2025-11-06-031500 (ver manifest e tar.gz)
+- Última exportação Kibana: `kibana_exports/export-2025-11-06-siem-lab-novo.ndjson`
 - Observação: na CLI sem Docker/ES locais, etapas de logs/snapshot podem ser marcadas como "skipped"; no host da vítima, ambas executam normalmente.
 
 Backup rápido (procedimento)
@@ -165,3 +181,8 @@ Lembrete da próxima sessão (ao invocar o agente e/ou pedir “rodar backup ago
 - Revisar documentação: confirmar que o README contém instruções da Lens 1 (Date histogram em `@timestamp`, Breakdown por `suricata.eve.alert.signature`, KQL de alertas). Se faltar, atualizar.
 - Exportar Saved Objects novamente (UI ou API) e salvar em `kibana_exports/` com a data do dia.
 - Atualizar este `agent.md` em “Checkpoint de sessão” com: status, último snapshot/backup e próximos passos.
+- Sessão 2025-11-06 (fecho):
+  - Estado registrado em `retomada_check-2025-11-06-035651.txt` (link: `retomada_check-latest.txt`).
+  - Stack UP: ES(8.14.3 healthy), Kibana(8.14.3), Filebeat, Suricata(lo), Juice Shop.
+  - Filebeat test config/output: OK; Suricata EVE ativo; ingestão confirmada.
+  - Dashboard atual: “Port Scan Detection (Suricata)”; export atualizado em `kibana_exports/`.

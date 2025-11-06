@@ -1,5 +1,7 @@
 # Backups and artifacts
 backups/
+retomada_check-*.txt
+retomada_check-latest.txt
 
 # Suricata default configs (some files may be unreadable inside container volume)
 suricata/*
