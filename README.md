@@ -5,41 +5,42 @@
 [![Docs (EN)](https://img.shields.io/badge/docs-EN-blue)](README.md)
 [![Docs (pt‑BR)](https://img.shields.io/badge/docs-pt%E2%80%91BR-blue)](README.pt-BR.md)
 
-Modern, reproducible lab to detect TCP SYN port scanning with Suricata, ship events via Filebeat to Elasticsearch, and visualize in Kibana Lens. Includes local detection rules, Saved Objects export (NDJSON), health/backup/export/screenshot scripts, and bilingual docs.
+Modern, reproducible lab to detect TCP SYN port scanning with Suricata, ship events via Filebeat to Elasticsearch, and visualize everything inside Kibana Lens. Includes local detection rules, Saved Objects export (NDJSON), health/backup/export/screenshot scripts, and bilingual docs.
 
 ![Dashboard Overview](docs/screenshots/dashboard_overview.png)
 
 ## Contents
 
-- What I Built
-- Architecture and Rationale
-- Design Decisions
-- Components and Versions
-- Detection Rules
-- Setup and Health Checks
-- Demo TL;DR (Single Host)
-- Traffic Generation (Nmap)
-- Kibana Dashboard and KQL
-- Exports (NDJSON) and Reproducibility
-- Backup and Snapshots
-- Troubleshooting
-- Project Layout
-- Screenshots
-- Results and Evidence
-- License, Conduct, Security
-- Acknowledgements
+- [What I Built & Why](#what-i-built--why)
+- [Architecture & Flow](#architecture--flow)
+- [Design Decisions](#design-decisions)
+- [Components and Versions](#components-and-versions)
+- [Detection Rules (local)](#detection-rules-local)
+- [Runbook (Setup → Health → Traffic → Teardown)](#runbook-setup--health--traffic--teardown)
+- [Automation Scripts](#automation-scripts)
+- [Traffic Generation (Nmap)](#traffic-generation-nmap)
+- [Kibana Dashboard & KQL](#kibana-dashboard--kql)
+- [Evidence & Screenshots](#evidence--screenshots)
+- [Exports (NDJSON) & Reproducibility](#exports-ndjson--reproducibility)
+- [Backup & Snapshots](#backup--snapshots)
+- [Hardening & Ops Notes](#hardening--ops-notes)
+- [Troubleshooting](#troubleshooting)
+- [Project Layout](#project-layout)
+- [Evidence & Screenshots (gallery)](#evidence--screenshots-gallery)
+- [Results & Evidence](#results--evidence)
+- [License, Conduct, Security](#license-conduct-security)
+- [Acknowledgements](#acknowledgements)
 
-What I built
-- A containerized detection lab that identifies TCP SYN port scanning and visualizes results in Kibana.
-- Suricata rule engineering: baseline SYN (sid 9900001) and a scan-threshold rule (sid 9901001) with detection_filter.
-- EVE → ECS pipeline using Filebeat’s Suricata module, landing in Elasticsearch data streams.
-- A Kibana dashboard (“Port Scan Detection (Suricata)”) with Lens panels (alerts over time, top sources/ports, port ranges, details).
-- Operational scripts for health checks, reproducible exports (NDJSON), snapshots/backups, and headless screenshot capture.
-- Single-host and network modes via `.env` (`SURICATA_IFACE=lo` or your NIC).
+## What I Built & Why
+- Containerised Suricata → Filebeat → Elasticsearch → Kibana lab focused on TCP SYN scan detection. It complements the offensive [Pentest Lab](https://github.com/fantasmagorikus/pentest-lab) so you can showcase both sides of the story.
+- Local Suricata rules: baseline SYN (sid 9900001) + threshold rule (sid 9901001) to flag Nmap sweeps.
+- EVE JSON shipped via Filebeat Suricata module into ECS data streams, visualised with a curated Kibana dashboard.
+- Operational scripts cover health checks, snapshots/backups, screenshot capture, and NDJSON exports for portability.
+- `.env` toggles single-host (`lo`) and LAN interfaces; OWASP Juice Shop (3000/tcp) provides deterministic traffic.
 
-Detect TCP SYN port scans and visualize them with Kibana Lens. Suricata generates EVE JSON, Filebeat (suricata module) ships structured ECS events into Elasticsearch, and a Kibana dashboard presents results. OWASP Juice Shop runs as a target on port 3000.
+Detect TCP SYN port scans, correlate them with Juice Shop traffic, and present the story in Kibana Lens. This mirrors the documentation style of the Pentest Lab to keep both repos uniform.
 
-## Architecture and Rationale
+## Architecture & Flow
 
 ```mermaid
 flowchart LR
@@ -83,58 +84,56 @@ alert tcp any any -> $HOME_NET any (msg:"LAB - Port Scan (SYN threshold)"; flags
 - 9900001: baseline SYN detection
 - 9901001: raises an alert when a source sends ≥20 SYNs within 60s (by_src)
 
-## Setup and Health Checks
+## Runbook (Setup → Health → Traffic → Teardown)
 
-Prerequisites (Linux): Docker + Docker Compose, `curl`, `jq`, and `nmap` for traffic generation.
+Prereqs (Linux): Docker, Docker Compose, `curl`, `jq`, `nmap`.
 
-1) Change into the lab directory
 ```bash
 cd homelab-security/suricata-elk-lab
-```
 
-2) Prepare environment
-- Copy the example env and adjust interface if needed:
-```bash
+# 1) Configure interface (single host = lo, LAN = your NIC)
 cp .env.example .env
-# default is SURICATA_IFACE=lo (single-host). For LAN, set SURICATA_IFACE to your NIC (e.g. wlp3s0)
-```
+# edit SURICATA_IFACE if needed
 
-3) Start the stack
-```bash
+# 2) Start the stack
 docker compose up -d
-```
 
-4) Run the one-shot health check (prints and logs results)
-```bash
+# 3) Health check + log capture
 bash scripts/retomada_check.sh
-```
-Artifacts are saved as `retomada_check-YYYY-MM-DD-HHMMSS.txt` and symlinked to `retomada_check-latest.txt`.
 
-## Demo TL;DR (Single Host)
-
-```bash
-git clone <this repo>
-cd suricata-port-scan-detection-lab/homelab-security/suricata-elk-lab
-cp .env.example .env
-docker compose up -d
-bash scripts/retomada_check.sh
+# 4) Generate traffic (single-host example)
 sudo nmap -sS -p 1-10000 127.0.0.1 -T4 --reason
-open http://localhost:5601 (Dashboard: "Port Scan Detection (Suricata)")
+
+# 5) Explore dashboard
+open http://localhost:5601
+
+# 6) Tear down
+docker compose down -v
 ```
+
+Makefile shortcuts (single host):
+`make up | make health | make nmap-local | make dashboard | make screenshots | make backup | make down`
+
+## Automation Scripts
+
+- `scripts/retomada_check.sh` — one-shot health checklist (services, logs, curl checks) with timestamped report.
+- `scripts/backup.sh` — ES snapshot + Suricata logs + config tarball + next-steps checklist.
+- `scripts/kibana_export_dashboard.sh` / `scripts/kibana_rename_dashboard.sh` — Saved Objects operations.
+- `scripts/capture_screenshots.sh` — headless Chromium captures dashboard panels for docs/portfolio.
+- `scripts/publish_github.sh` — mirrors repo to GitHub via `gh` CLI (SSH).
 
 ## Traffic Generation (Nmap)
 
-- Single-host demo (loopback):
-```bash
-sudo nmap -sS -p 1-10000 127.0.0.1 -T4 --reason
-```
+- Single-host loopback:
+  ```bash
+  sudo nmap -sS -p 1-10000 127.0.0.1 -T4 --reason
+  ```
+- LAN demo (execute from attacker host):
+  ```bash
+  sudo nmap -sS -p 1-1000 <VICTIM_IP> -T4 --reason
+  ```
 
-- Network demo (from another host on the LAN, scanning this machine):
-```bash
-sudo nmap -sS -p 1-1000 <VICTIM_IP> -T4 --reason
-```
-
-## Kibana Dashboard and KQL
+## Kibana Dashboard & KQL
 
 Open Kibana at `http://localhost:5601`.
 
@@ -156,7 +155,13 @@ event.module: "suricata" and suricata.eve.event_type: "alert"
 suricata.eve.alert.signature_id: 9901001
 ```
 
-## Exports (NDJSON) and Reproducibility
+## Evidence & Screenshots
+
+- Kibana captures live under `docs/screenshots/` (PNG) and can be regenerated via `make screenshots`.
+- `scripts/capture_screenshots.sh` stores raw PNGs in `docs/screenshots/` for README embedding and interviews.
+- Combine with Pentest Lab evidence to tell the offensive + defensive story (e.g., Suricata alert screenshot mirrors ZAP findings).
+
+## Exports (NDJSON) & Reproducibility
 
 Saved Objects export is provided under `kibana_exports/` as NDJSON (newline-delimited JSON). Import it to recreate dashboard and related objects.
 
@@ -167,13 +172,19 @@ bash scripts/kibana_export_dashboard.sh "Port Scan Detection (Suricata)"
 
 - Import (UI): Kibana → Stack Management → Saved Objects → Import → select `.ndjson` and confirm.
 
-## Backup and Snapshots
+## Backup & Snapshots
 
 Create an Elasticsearch snapshot and archive lab configs with a single script:
 ```bash
 bash scripts/backup.sh
 ```
 Outputs under `backups/<timestamp>/` include snapshot response, Suricata logs (if available), and a tarball of key configs.
+
+## Hardening & Ops Notes
+- Suricata runs with `network_mode: host`; adjust `.env` carefully (no default NIC assumptions).
+- Filebeat runs as root with `-strict.perms=false` to avoid permission spamming when mounting configs.
+- Elasticsearch stack disables security for lab purposes—never expose to untrusted networks. Enable `xpack.security` if turning this into a long-lived SIEM.
+- Store snapshots (`es-snapshots` volume) and backups (`backups/`) outside of ephemeral disks if running in the cloud.
 
 ## Troubleshooting
 
@@ -202,7 +213,7 @@ Outputs under `backups/<timestamp>/` include snapshot response, Suricata logs (i
 - `kibana_exports/` — saved objects export (.ndjson)
 - `Makefile` — common tasks: `make up|down|health|backup|export|screenshots`
 
-## Screenshots
+## Evidence & Screenshots (gallery)
 
 Dashboard overview (last 15 minutes):
 
