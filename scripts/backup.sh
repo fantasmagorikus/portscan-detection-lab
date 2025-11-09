@@ -77,5 +77,5 @@ Next session checklist
 - Regenerate screenshots: make screenshots (script validates alerts before capture)
 - Confirm panel close-ups exist: alerts_over_time.png and top_ports_closeup.png
 - If not already done in GitHub: set social preview (upload docs/screenshots/dashboard_overview.png) and pin repo on profile
-- Reference doc: Documents/codex_notes/SOC_PROJECTS/PORT_SCAN_LAB.md
+- Reference doc: Documents/codex_agents/port-scan-lab/agent.md
 NEXT
